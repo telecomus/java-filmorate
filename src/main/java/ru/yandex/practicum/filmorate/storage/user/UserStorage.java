@@ -5,8 +5,12 @@ import java.util.List;
 
 public interface UserStorage {
     User add(User user);
+
     User update(User user);
+
     List<User> findAll();
+
     User findById(int id);
+
     void delete(int id);
 }
