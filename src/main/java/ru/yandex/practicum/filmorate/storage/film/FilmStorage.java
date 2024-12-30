@@ -13,4 +13,6 @@ public interface FilmStorage {
     Film findById(int id);
 
     void delete(int id);
+
+    boolean existsById(int id);
 }
