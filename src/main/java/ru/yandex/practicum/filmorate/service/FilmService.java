@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.like.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import java.time.LocalDate;
@@ -16,12 +17,13 @@ public class FilmService {
     private static final LocalDate CINEMA_BIRTHDAY = LocalDate.of(1895, 12, 28);
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-    private final Map<Integer, Set<Integer>> filmLikes = new HashMap<>();
+    private final FilmLikeStorage filmLikeStorage;
 
     @Autowired
-    public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
+    public FilmService(FilmStorage filmStorage, UserStorage userStorage, FilmLikeStorage filmLikeStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
+        this.filmLikeStorage = filmLikeStorage;
     }
 
     public Film addFilm(Film film) {
@@ -47,7 +49,7 @@ public class FilmService {
             throw new NotFoundException("Пользователь с ID " + userId + " не найден");
         }
         Film film = filmStorage.findById(filmId);
-        filmLikes.computeIfAbsent(filmId, k -> new HashSet<>()).add(userId);
+        filmLikeStorage.addLike(filmId, userId);
     }
 
     public void removeLike(int filmId, int userId) {
@@ -55,14 +57,14 @@ public class FilmService {
             throw new NotFoundException("Пользователь с ID " + userId + " не найден");
         }
         Film film = filmStorage.findById(filmId);
-        filmLikes.computeIfAbsent(filmId, k -> new HashSet<>()).remove(userId);
+        filmLikeStorage.removeLike(filmId, userId);
     }
 
     public List<Film> getPopularFilms(int count) {
         return filmStorage.findAll().stream()
                 .sorted((f1, f2) -> {
-                    int likes1 = filmLikes.getOrDefault(f1.getId(), Collections.emptySet()).size();
-                    int likes2 = filmLikes.getOrDefault(f2.getId(), Collections.emptySet()).size();
+                    int likes1 = filmLikeStorage.getLikesCount(f1.getId());
+                    int likes2 = filmLikeStorage.getLikesCount(f2.getId());
                     return Integer.compare(likes2, likes1);
                 })
                 .limit(count)

@@ -34,9 +34,9 @@ public class ErrorHandler {
         return Map.of("error", e.getBindingResult().getFieldErrors().get(0).getDefaultMessage());
     }
 
-    @ExceptionHandler
+    @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Map<String, String> handleThrowable(final Throwable e) {
+    public Map<String, String> handleException(final Exception e) {
         log.error("Произошла непредвиденная ошибка: {}", e.getMessage());
         return Map.of("error", "Произошла непредвиденная ошибка.");
     }

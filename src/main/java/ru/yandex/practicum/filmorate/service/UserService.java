@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.storage.friendship.FriendshipStorage;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -11,11 +12,12 @@ import java.util.stream.Collectors;
 @Service
 public class UserService {
     private final UserStorage userStorage;
-    private final Map<Integer, Set<Integer>> friendships = new HashMap<>();
+    private final FriendshipStorage friendshipStorage;
 
     @Autowired
-    public UserService(UserStorage userStorage) {
+    public UserService(UserStorage userStorage, FriendshipStorage friendshipStorage) {
         this.userStorage = userStorage;
+        this.friendshipStorage = friendshipStorage;
     }
 
     public User addUser(User user) {
@@ -39,34 +41,25 @@ public class UserService {
     public void addFriend(int userId, int friendId) {
         User user = userStorage.findById(userId);
         User friend = userStorage.findById(friendId);
-
-        friendships.computeIfAbsent(userId, k -> new HashSet<>()).add(friendId);
-        friendships.computeIfAbsent(friendId, k -> new HashSet<>()).add(userId);
+        friendshipStorage.addFriend(userId, friendId);
     }
 
     public void removeFriend(int userId, int friendId) {
         userStorage.findById(userId);
         userStorage.findById(friendId);
-
-        if (friendships.containsKey(userId)) {
-            friendships.get(userId).remove(friendId);
-        }
-        if (friendships.containsKey(friendId)) {
-            friendships.get(friendId).remove(userId);
-        }
+        friendshipStorage.removeFriend(userId, friendId);
     }
 
     public List<User> getFriends(int userId) {
         userStorage.findById(userId);
-        Set<Integer> userFriends = friendships.getOrDefault(userId, Collections.emptySet());
-        return userFriends.stream()
+        return friendshipStorage.getFriends(userId).stream()
                 .map(userStorage::findById)
                 .collect(Collectors.toList());
     }
 
     public List<User> getCommonFriends(int userId, int otherId) {
-        Set<Integer> userFriends = friendships.getOrDefault(userId, Collections.emptySet());
-        Set<Integer> otherFriends = friendships.getOrDefault(otherId, Collections.emptySet());
+        Set<Integer> userFriends = friendshipStorage.getFriends(userId);
+        Set<Integer> otherFriends = friendshipStorage.getFriends(otherId);
 
         Set<Integer> commonFriendIds = new HashSet<>(userFriends);
         commonFriendIds.retainAll(otherFriends);
