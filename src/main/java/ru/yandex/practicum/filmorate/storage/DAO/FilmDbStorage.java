@@ -16,6 +16,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.ArrayList;
 
 @Component
 @Qualifier("filmDbStorage")
@@ -44,15 +46,19 @@ public class FilmDbStorage implements FilmStorage {
 
         film.setId(keyHolder.getKey().intValue());
 
-        // Сохраняем жанры фильма
+        // Сохраняем жанры фильма с помощью batchUpdate
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             String genreSql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
+            List<Object[]> batchArgs = new ArrayList<>();
+
             for (Genre genre : film.getGenres()) {
-                jdbcTemplate.update(genreSql, film.getId(), genre.getId());
+                batchArgs.add(new Object[]{film.getId(), genre.getId()});
             }
+
+            jdbcTemplate.batchUpdate(genreSql, batchArgs);
         }
 
-        return film;
+        return findById(film.getId());
     }
 
     @Override
@@ -72,23 +78,33 @@ public class FilmDbStorage implements FilmStorage {
             throw new NotFoundException("Фильм с ID " + film.getId() + " не найден");
         }
 
-        // Обновляем жанры
+        // Обновляем жанры с помощью batchUpdate
         jdbcTemplate.update("DELETE FROM film_genres WHERE film_id = ?", film.getId());
+
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             String genreSql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
+            List<Object[]> batchArgs = new ArrayList<>();
+
             for (Genre genre : film.getGenres()) {
-                jdbcTemplate.update(genreSql, film.getId(), genre.getId());
+                batchArgs.add(new Object[]{film.getId(), genre.getId()});
             }
+
+            jdbcTemplate.batchUpdate(genreSql, batchArgs);
         }
 
-        return film;
+        return findById(film.getId());
     }
 
     @Override
     public List<Film> findAll() {
         String sql = "SELECT f.*, m.name as mpa_name FROM films f " +
                 "LEFT JOIN mpa_ratings m ON f.mpa_id = m.mpa_id";
-        return jdbcTemplate.query(sql, this::mapRowToFilm);
+        List<Film> films = jdbcTemplate.query(sql, this::mapRowToFilm);
+
+        // Загружаем жанры для всех фильмов одним запросом
+        loadGenresForFilms(films);
+
+        return films;
     }
 
     @Override
@@ -103,21 +119,38 @@ public class FilmDbStorage implements FilmStorage {
         }
 
         Film film = films.get(0);
-        loadFilmGenres(film);
+        loadGenresForFilms(List.of(film));
         return film;
     }
 
-    private void loadFilmGenres(Film film) {
-        String sql = "SELECT g.genre_id, g.name FROM genres g " +
-                "JOIN film_genres fg ON g.genre_id = fg.genre_id " +
-                "WHERE fg.film_id = ?";
-        List<Genre> genres = jdbcTemplate.query(sql, (rs, rowNum) -> {
+    private void loadGenresForFilms(List<Film> films) {
+        if (films.isEmpty()) {
+            return;
+        }
+
+        String filmIds = films.stream()
+                .map(film -> String.valueOf(film.getId()))
+                .collect(java.util.stream.Collectors.joining(","));
+
+        String sql = "SELECT fg.film_id, g.genre_id, g.name " +
+                "FROM film_genres fg " +
+                "JOIN genres g ON fg.genre_id = g.genre_id " +
+                "WHERE fg.film_id IN (" + filmIds + ")";
+
+        var filmMap = films.stream()
+                .collect(java.util.stream.Collectors.toMap(Film::getId, film -> film));
+
+        jdbcTemplate.query(sql, (rs) -> {
+            int filmId = rs.getInt("film_id");
             Genre genre = new Genre();
             genre.setId(rs.getInt("genre_id"));
             genre.setName(rs.getString("name"));
-            return genre;
-        }, film.getId());
-        film.setGenres(new HashSet<>(genres));
+
+            Film film = filmMap.get(filmId);
+            if (film != null) {
+                film.getGenres().add(genre);
+            }
+        });
     }
 
     private Film mapRowToFilm(ResultSet rs, int rowNum) throws SQLException {
@@ -133,6 +166,7 @@ public class FilmDbStorage implements FilmStorage {
         mpa.setName(rs.getString("mpa_name"));
         film.setMpa(mpa);
 
+        film.setGenres(new HashSet<>());
         return film;
     }
 
