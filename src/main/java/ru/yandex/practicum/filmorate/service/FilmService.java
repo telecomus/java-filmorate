@@ -5,12 +5,18 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genre;
+import ru.yandex.practicum.filmorate.model.Mpa;
+import ru.yandex.practicum.filmorate.storage.dao.GenreDbStorage;
+import ru.yandex.practicum.filmorate.storage.dao.MpaDbStorage;
 import ru.yandex.practicum.filmorate.storage.film.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.like.FilmLikeStorage;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+
 import java.time.LocalDate;
-import java.util.*;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -19,23 +25,33 @@ public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
     private final FilmLikeStorage filmLikeStorage;
+    private final MpaDbStorage mpaStorage;
+    private final GenreDbStorage genreStorage;
 
     @Autowired
     public FilmService(@Qualifier("filmDbStorage") FilmStorage filmStorage,
                        @Qualifier("userDbStorage") UserStorage userStorage,
-                       @Qualifier("filmLikeDbStorage") FilmLikeStorage filmLikeStorage) {
+                       @Qualifier("filmLikeDbStorage") FilmLikeStorage filmLikeStorage,
+                       MpaDbStorage mpaStorage,
+                       GenreDbStorage genreStorage) {
         this.filmStorage = filmStorage;
         this.userStorage = userStorage;
         this.filmLikeStorage = filmLikeStorage;
+        this.mpaStorage = mpaStorage;
+        this.genreStorage = genreStorage;
     }
 
     public Film addFilm(Film film) {
         validateReleaseDate(film);
+        validateMpa(film.getMpa());
+        validateGenres(film.getGenres());
         return filmStorage.add(film);
     }
 
     public Film updateFilm(Film film) {
         validateReleaseDate(film);
+        validateMpa(film.getMpa());
+        validateGenres(film.getGenres());
         return filmStorage.update(film);
     }
 
@@ -77,6 +93,16 @@ public class FilmService {
     private void validateReleaseDate(Film film) {
         if (film.getReleaseDate().isBefore(CINEMA_BIRTHDAY)) {
             throw new ValidationException("Дата релиза не может быть раньше 28 декабря 1895 года");
+        }
+    }
+
+    private void validateMpa(Mpa mpa) {
+        mpaStorage.findById(mpa.getId());
+    }
+
+    private void validateGenres(Set<Genre> genres) {
+        for (Genre genre : genres) {
+            genreStorage.findById(genre.getId());
         }
     }
 }
