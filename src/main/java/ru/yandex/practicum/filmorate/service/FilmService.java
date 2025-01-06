@@ -105,4 +105,8 @@ public class FilmService {
             genreStorage.findById(genre.getId());
         }
     }
+
+    public boolean isFilmExists(int id) {
+        return filmStorage.existsById(id);
+    }
 }
