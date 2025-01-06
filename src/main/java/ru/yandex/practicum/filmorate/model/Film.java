@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 public class Film {
@@ -20,4 +22,9 @@ public class Film {
 
     @Positive(message = "Продолжительность фильма должна быть положительной")
     private int duration;
+
+    // Новые поля
+    private Mpa mpa; // Рейтинг MPA
+    private Set<Genre> genres = new HashSet<>(); // Жанры фильма
+    private int rate = 0; // Рейтинг фильма (количество лайков)
 }
