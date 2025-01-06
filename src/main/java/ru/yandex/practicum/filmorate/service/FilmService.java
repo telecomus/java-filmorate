@@ -97,12 +97,20 @@ public class FilmService {
     }
 
     private void validateMpa(Mpa mpa) {
-        mpaStorage.findById(mpa.getId());
+        try {
+            mpaStorage.findById(mpa.getId());
+        } catch (NotFoundException e) {
+            throw new ValidationException("MPA рейтинг с ID " + mpa.getId() + " не найден");
+        }
     }
 
     private void validateGenres(Set<Genre> genres) {
         for (Genre genre : genres) {
-            genreStorage.findById(genre.getId());
+            try {
+                genreStorage.findById(genre.getId());
+            } catch (NotFoundException e) {
+                throw new ValidationException("Жанр с ID " + genre.getId() + " не найден");
+            }
         }
     }
 
