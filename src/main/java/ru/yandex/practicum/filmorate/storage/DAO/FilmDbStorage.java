@@ -14,9 +14,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.ArrayList;
+import java.util.*;
 
 @Component
 @Qualifier("filmDbStorage")
@@ -165,7 +163,7 @@ public class FilmDbStorage implements FilmStorage {
         mpa.setName(rs.getString("mpa_name"));
         film.setMpa(mpa);
 
-        film.setGenres(new HashSet<>());
+        film.setGenres(new TreeSet<>(Comparator.comparingInt(Genre::getId)));
         return film;
     }
 
