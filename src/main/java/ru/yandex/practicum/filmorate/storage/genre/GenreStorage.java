@@ -6,6 +6,8 @@ import java.util.Set;
 
 public interface GenreStorage {
     List<Genre> findAll();
+
     Genre findById(int id);
+
     List<Genre> findByIds(Set<Integer> genreIds);
 }
