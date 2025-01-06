@@ -15,8 +15,7 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -105,12 +104,26 @@ public class FilmService {
     }
 
     private void validateGenres(Set<Genre> genres) {
-        for (Genre genre : genres) {
-            try {
-                genreStorage.findById(genre.getId());
-            } catch (NotFoundException e) {
-                throw new ValidationException("Жанр с ID " + genre.getId() + " не найден");
-            }
+        if (genres == null || genres.isEmpty()) {
+            return;
+        }
+
+        // Получаем все ID жанров для проверки
+        Set<Integer> genreIds = genres.stream()
+                .map(Genre::getId)
+                .collect(Collectors.toSet());
+
+        // Получаем все существующие жанры одним запросом
+        List<Genre> existingGenres = genreStorage.findByIds(genreIds);
+        Set<Integer> existingGenreIds = existingGenres.stream()
+                .map(Genre::getId)
+                .collect(Collectors.toSet());
+
+        // Проверяем, все ли жанры существуют
+        if (existingGenreIds.size() != genreIds.size()) {
+            Set<Integer> invalidIds = new HashSet<>(genreIds);
+            invalidIds.removeAll(existingGenreIds);
+            throw new ValidationException("Жанры с ID " + invalidIds + " не найдены");
         }
     }
 
