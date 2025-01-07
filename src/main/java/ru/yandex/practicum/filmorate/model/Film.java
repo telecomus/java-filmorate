@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Positive;
 import java.time.LocalDate;
+import java.util.TreeSet;
+import java.util.Set;
+import java.util.Comparator;
 
 @Data
 public class Film {
@@ -20,4 +23,10 @@ public class Film {
 
     @Positive(message = "Продолжительность фильма должна быть положительной")
     private int duration;
+
+    private Mpa mpa;
+
+    private Set<Genre> genres = new TreeSet<>(Comparator.comparingInt(Genre::getId));
+
+    private int rate = 0;
 }

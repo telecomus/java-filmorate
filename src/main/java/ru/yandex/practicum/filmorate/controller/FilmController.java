@@ -3,9 +3,11 @@ package ru.yandex.practicum.filmorate.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import jakarta.validation.Valid;
 import ru.yandex.practicum.filmorate.service.FilmService;
+
 import java.util.List;
 
 @RestController
@@ -27,6 +29,9 @@ public class FilmController {
 
     @PutMapping
     public Film update(@Valid @RequestBody Film film) {
+        if (!filmService.isFilmExists(film.getId())) {
+            throw new NotFoundException("Фильм с ID " + film.getId() + " не найден");
+        }
         log.info("Обновление фильма: {}", film);
         return filmService.updateFilm(film);
     }
